@@ -3,6 +3,7 @@
 import { useParams } from 'next/navigation';
 import { useRef, useState } from 'react';
 import { VncScreen, VncScreenHandle } from 'react-vnc';
+import type RFB from '@novnc/novnc/lib/rfb';
 
 export default function ContainerPage() {
     const { container } = useParams();
@@ -26,16 +27,28 @@ export default function ContainerPage() {
                     url={wsUrl}
                     scaleViewport
                     resizeSession
-                    background="#000"
-                    style={{ width: '100%', height: '100%' }}
-                    credentials={{ password: 'vncpassword' }}
-                    rfbOptions={{ credentials: { password: 'vncpassword' } }}
-                    shared
+                    style={{ width: '100%', height: '100%', backgroundColor: '#000000' }}
+                    rfbOptions={{ credentials: {
+                            password: 'vncpassword',
+                            username: '',
+                            target: ''
+                        } }}
                     onConnect={() => setStatus('connected')}
                     onDisconnect={() => setStatus('disconnected')}
-                    onCredentialsRequired={(rfb) => {
+                    onCredentialsRequired={(event: CustomEvent<{ types: ('username' | 'password' | 'target')[] }>) => {
                         console.log('Credentials requested');
-                        rfb.sendCredentials({ password: 'vncpassword' });
+
+                        const target = event.target as EventTarget & { rfb?: RFB };
+
+                        if (target.rfb && typeof target.rfb.sendCredentials === 'function') {
+                            target.rfb.sendCredentials({
+                                username: '',
+                                password: 'vncpassword',
+                                target: ''
+                            });
+                        } else {
+                            console.warn('rfb or sendCredentials not available');
+                        }
                     }}
                     onDesktopName={(e) =>
                         setStatus(`connected: ${e.detail.name}`)
