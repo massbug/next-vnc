@@ -4,6 +4,9 @@
 
 import Docker from 'dockerode';
 import { revalidatePath } from 'next/cache';
+import { db } from '@/db';
+import { containers } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
 export interface ContainerInfo {
     id: string;
@@ -37,12 +40,20 @@ export async function listContainers(): Promise<ContainerInfo[]> {
 }
 
 export async function createContainer(name: string): Promise<void> {
-    await docker.createContainer({
+    const container = await docker.createContainer({
         Image: IMAGE_NAME,
         name,
         Env: [`VNC_PASSWORD=${VNC_PASSWORD}`],
         HostConfig: { NetworkMode: 'bridge' },
-    }).then((ctr) => ctr.start());
+    });
+    
+    await container.start();
+    
+    // 将容器信息保存到数据库
+    await db.insert(containers).values({
+        id: container.id,
+        name: name,
+    });
 
     revalidatePath('/');
 }
@@ -53,5 +64,9 @@ export async function deleteContainer(id: string): Promise<void> {
         await ctr.stop();
     } catch {}
     await ctr.remove();
+    
+    // 从数据库中删除容器信息
+    await db.delete(containers).where(eq(containers.id, id));
+    
     revalidatePath('/');
 }

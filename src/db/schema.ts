@@ -41,3 +41,9 @@ export const verificationTokens = pgTable('verification_tokens', {
 }, (vt) => ({
   compoundKey: primaryKey({ columns: [vt.identifier, vt.token] })
 }));
+
+export const containers = pgTable('containers', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
